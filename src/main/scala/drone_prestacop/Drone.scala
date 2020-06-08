@@ -1,6 +1,9 @@
 package drone_prestacop
 import java.util.UUID.randomUUID
 import java.time.Instant
+import java.util.Properties
+
+import org.apache.kafka.clients.producer._
 
 import scala.util.Random
 
@@ -50,18 +53,29 @@ class Drone {
 
   }
 
-  def send: Unit = {
+  def send_violation: Unit = {
     if (Random.between(0, 100) > 95) {
       val (message, image_id, image) = generate_violation
-      print(message)
-      print(image_id)
-      print(image)
+      //code envoie
     }
-    println(latitude)
-    println(longitude)
-    println(id)
-    println(timestamp)
+  }
 
+  def send: Unit = {
+//
+//    println(latitude)
+//    println(longitude)
+//    println(id)
+//    println(timestamp)
+
+    val props = new Properties()
+    props.put("bootstrap.servers", "localhost:9092")
+    props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+    props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+    val producer = new KafkaProducer[String, String](props)
+    val data = Map("long" -> longitude, "lat" -> latitude)
+    val record = new ProducerRecord[String, String]("Prestacop", "key", data.toString())
+    producer.send(record)
+    producer.close()
 
   }
 

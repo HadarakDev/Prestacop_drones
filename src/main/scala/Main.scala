@@ -4,9 +4,12 @@ object Main {
   def main(args: Array[String]): Unit = {
 
     val drones: List[Drone] = List.fill(10)(new Drone)
-    for( d <- drones) {
-
-      d.send
+    while (true) {
+      for (d <- drones) {
+        d.update
+        d.send_violation
+        d.send
+      }
     }
   }
 }
