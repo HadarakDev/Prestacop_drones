@@ -4,8 +4,11 @@ import java.time.Instant
 import java.util.Properties
 
 import org.apache.kafka.clients.producer._
+import org.json4s.jackson.Json
 
 import scala.util.Random
+//import org.json4s.native.Json
+import org.json4s.DefaultFormats
 
 class Drone {
   var  r = new Random();
@@ -13,6 +16,12 @@ class Drone {
   var longitude:Float = -74 + r.nextFloat()
   var id:String = randomUUID().toString
   var timestamp:Long = Instant.now.getEpochSecond
+  val props = new Properties()
+
+  props.put("bootstrap.servers", "localhost:9092")
+  props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+  props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
+  val producer = new KafkaProducer[String, String](props)
 
   def update: Unit = {
     val lat_rand = Random.between(-1, 1)
@@ -67,15 +76,11 @@ class Drone {
 //    println(id)
 //    println(timestamp)
 
-    val props = new Properties()
-    props.put("bootstrap.servers", "localhost:9092")
-    props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-    props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-    val producer = new KafkaProducer[String, String](props)
-    val data = Map("long" -> longitude, "lat" -> latitude)
-    val record = new ProducerRecord[String, String]("Prestacop", "key", data.toString())
+
+    val data = Map("long" -> longitude, "lat" -> latitude, "timestamp" -> timestamp)
+    val JsonData = Json(DefaultFormats).write(data)
+    val record = new ProducerRecord[String, String]("Prestacop", id, JsonData)
     producer.send(record)
-    producer.close()
 
   }
 
