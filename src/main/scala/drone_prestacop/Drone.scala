@@ -1,14 +1,35 @@
 package drone_prestacop
 import java.util.UUID.randomUUID
 import java.time.Instant
+import java.util
 import java.util.Properties
 
-import org.apache.kafka.clients.producer._
-import org.json4s.jackson.Json
+import com.amazonaws.ClientConfiguration
+import com.amazonaws.auth.{AWSSessionCredentials, AWSStaticCredentialsProvider, BasicSessionCredentials, InstanceProfileCredentialsProvider}
+import com.amazonaws.regions.{Region, Regions}
+import com.amazonaws.util.json
+import com.google.gson.Gson
+
+import scala.collection.immutable.HashMap
+
+//import org.apache.kafka.clients.producer._
+//import org.json4s.jackson.Json
 
 import scala.util.Random
 //import org.json4s.native.Json
-import org.json4s.DefaultFormats
+//import org.json4s.DefaultFormats
+import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
+
+import com.amazonaws.services.kinesis.model.PutRecordsResult
+import java.nio.ByteBuffer
+import java.util
+import scala.collection.JavaConverters._
+import com.amazonaws.services.kinesis.model.PutRecordsRequest
+import com.amazonaws.services.kinesis.model.PutRecordsRequestEntry
+
+
+
+
 
 class Drone {
   var  r = new Random();
@@ -16,12 +37,28 @@ class Drone {
   var longitude:Float = -74 + r.nextFloat()
   var id:String = randomUUID().toString
   var timestamp:Long = Instant.now.getEpochSecond
-  val props = new Properties()
 
-  props.put("bootstrap.servers", "localhost:9092")
-  props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-  props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
-  val producer = new KafkaProducer[String, String](props)
+  import com.amazonaws.auth.BasicAWSCredentials
+  val aws_access_key_id = "ASIAWQZQX3A3RWDMFIOH"
+  val aws_secret_access_key = "V5lG66hQw7GgXKwtHpq1rA0vZbAP4BWSrkeVX3le"
+  val aws_session_token = "FwoGZXIvYXdzEK3//////////wEaDKqdsJJmwwFPIByWryK/AdQ5IvHlwOA1ACCtGEOiMEaEpow67L9TpfS22u4ucrc7pbwtg6ZNYuTuy9D5xcG2Oo2JPlGKYLafQHdM/P5mNUAfLXZQHrNnBDCzfRG2bMkirpWB2M6vABi/yBMwlFxs1FPZcnQXZKgqixouO1exWt5Qq7J55LgYbBBXBIs8qo7GM3SJq7HaI6uxx509LJEIDB+CQb6xTjCBQDw+wYrK/WJxAghXv7r2iv/hn231A9vFTKmg8B6eL0s+n/69CV2TKLCq7vcFMi1Ob8Tso70rcaoaN3ZoOEFOig4KyI2cVVAW+EeMBWa0z9RpVXEF7chX37rWFPw="
+  val awsCreds =  new BasicSessionCredentials(aws_access_key_id,
+    aws_secret_access_key,
+    aws_session_token
+  )
+
+  val config = new ClientConfiguration()
+  val kinesisClient = AmazonKinesisClientBuilder
+      .standard
+      .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
+      .withRegion(Regions.US_EAST_1)
+      .withClientConfiguration(new ClientConfiguration())
+      .build()
+
+
+  val putRecordsRequest = new PutRecordsRequest
+  putRecordsRequest.setStreamName("message-prestacop")
+
 
   def update: Unit = {
     val lat_rand = Random.between(-1, 1)
@@ -77,10 +114,22 @@ class Drone {
 //    println(timestamp)
 
 
-    val data = Map("long" -> longitude, "lat" -> latitude, "timestamp" -> timestamp)
-    val JsonData = Json(DefaultFormats).write(data)
-    val record = new ProducerRecord[String, String]("Prestacop", id, JsonData)
-    producer.send(record)
+    val putRecordsRequestEntryList = new util.ArrayList[PutRecordsRequestEntry]
+
+    val data = Map("long" -> longitude, "lat" -> latitude,"timestamp" -> timestamp)
+
+    val gson = new Gson();
+    val jsondata = gson.toJson(data.asJava + "\n");
+
+    val putRecordsRequestEntry = new PutRecordsRequestEntry
+    putRecordsRequestEntry.setData(ByteBuffer.wrap(jsondata.getBytes))
+    putRecordsRequestEntry.setPartitionKey(String.format("partitionKey-%d", 1))
+    putRecordsRequestEntryList.add(putRecordsRequestEntry)
+
+
+    putRecordsRequest.setRecords(putRecordsRequestEntryList)
+    val putRecordsResult = kinesisClient.putRecords(putRecordsRequest)
+    System.out.println("Put Result" + putRecordsResult)
 
   }
 

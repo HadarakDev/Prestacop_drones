@@ -4,8 +4,8 @@ object Main {
   def main(args: Array[String]): Unit = {
 
     val drones: List[Drone] = List.fill(10)(new Drone)
-    while (true) {
-      Thread.sleep(3000)
+    for (i <- 0 until 300) {
+      //Thread.sleep(3000)
       for (d <- drones) {
         d.update
         d.send_violation
