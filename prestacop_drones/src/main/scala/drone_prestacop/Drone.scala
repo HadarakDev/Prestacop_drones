@@ -3,21 +3,16 @@ import java.util.UUID.randomUUID
 import java.time.Instant
 import java.util
 import java.util.Properties
-
+import play.api.libs.json._
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.{AWSSessionCredentials, AWSStaticCredentialsProvider, BasicSessionCredentials, InstanceProfileCredentialsProvider}
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.util.json
-import com.google.gson.Gson
 
 import scala.collection.immutable.HashMap
 
-//import org.apache.kafka.clients.producer._
-//import org.json4s.jackson.Json
-
 import scala.util.Random
-//import org.json4s.native.Json
-//import org.json4s.DefaultFormats
+
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder
 
 import com.amazonaws.services.kinesis.model.PutRecordsResult
@@ -39,9 +34,9 @@ class Drone {
   var timestamp:Long = Instant.now.getEpochSecond
 
   import com.amazonaws.auth.BasicAWSCredentials
-  val aws_access_key_id = "ASIAWQZQX3A3RWDMFIOH"
-  val aws_secret_access_key = "V5lG66hQw7GgXKwtHpq1rA0vZbAP4BWSrkeVX3le"
-  val aws_session_token = "FwoGZXIvYXdzEK3//////////wEaDKqdsJJmwwFPIByWryK/AdQ5IvHlwOA1ACCtGEOiMEaEpow67L9TpfS22u4ucrc7pbwtg6ZNYuTuy9D5xcG2Oo2JPlGKYLafQHdM/P5mNUAfLXZQHrNnBDCzfRG2bMkirpWB2M6vABi/yBMwlFxs1FPZcnQXZKgqixouO1exWt5Qq7J55LgYbBBXBIs8qo7GM3SJq7HaI6uxx509LJEIDB+CQb6xTjCBQDw+wYrK/WJxAghXv7r2iv/hn231A9vFTKmg8B6eL0s+n/69CV2TKLCq7vcFMi1Ob8Tso70rcaoaN3ZoOEFOig4KyI2cVVAW+EeMBWa0z9RpVXEF7chX37rWFPw="
+  val aws_access_key_id="ASIAWQZQX3A3ZN7PU4UE"
+  val aws_secret_access_key="dtVUDiFmE78t76aKCGAkXFs8/M+DYKkfAKOA5ahX"
+  val aws_session_token="FwoGZXIvYXdzEO///////////wEaDBqahmbh9zVe7+8pESK/ASd4+hwQ/50uQQqCVlP4HK59aJ0Vu9wkfFNq31TB1LJMii4XIXiHVhxlOPiTILm+y7Ir1EOY7exkv65ZGx9db7r6jUjS8hjpIss9GAkLuOnK1V/+3yr99rcyj7/q/OwXEfodI/h/k1vFhbJ7MFtles3s30Q9N/yteRQjaZa1HpFdQTN8X7jqvLwsLbOUCsllGfblU0nJ9bRJF0A94yyL7g1exRptF7lKClrH2ap3yAhphqxz1Ol+agigrz+Iu2JvKOvp/PcFMi39j/d1AcDiknPlDqdiyEhwFjRyxGaEjpT8tufqJLVf3vCeraP2C65HWoR2vnw="
   val awsCreds =  new BasicSessionCredentials(aws_access_key_id,
     aws_secret_access_key,
     aws_session_token
@@ -66,7 +61,6 @@ class Drone {
     latitude = latitude +  (r.nextFloat() * lat_rand)
     longitude = longitude + (r.nextFloat() * long_rand)
     timestamp = Instant.now.getEpochSecond
-    send
 
   }
 
@@ -95,42 +89,48 @@ class Drone {
     val image = images(image_id)
     (message, image_id, image)
 
+  }
+
+  def put_json_kinesis(jsonData:JsValue) = {
+      val putRecordsRequestEntryList = new util.ArrayList[PutRecordsRequestEntry]
+
+      val jsonFinal = Json.toJson(jsonData)
+      println(jsonFinal)
+
+      val putRecordsRequestEntry = new PutRecordsRequestEntry
+      putRecordsRequestEntry.setData(ByteBuffer.wrap(jsonFinal.toString().getBytes))
+      putRecordsRequestEntry.setPartitionKey(String.format("partitionKey-%d", 1))
+      putRecordsRequestEntryList.add(putRecordsRequestEntry)
 
 
+      putRecordsRequest.setRecords(putRecordsRequestEntryList)
+      val putRecordsResult = kinesisClient.putRecords(putRecordsRequest)
+      System.out.println("Put Result" + putRecordsResult)
   }
 
   def send_violation: Unit = {
-    if (Random.between(0, 100) > 95) {
+
       val (message, image_id, image) = generate_violation
-      //code envoie
-    }
+      val json: JsValue = Json.obj(
+        "droneId"     -> id,
+        "long"               -> longitude,
+        "lat"                -> latitude,
+        "image"              -> image,
+        "message"            -> message.toString,
+        "timestamp"          -> timestamp,
+      )
+      put_json_kinesis(json)
   }
 
+
   def send: Unit = {
-//
-//    println(latitude)
-//    println(longitude)
-//    println(id)
-//    println(timestamp)
-
-
-    val putRecordsRequestEntryList = new util.ArrayList[PutRecordsRequestEntry]
-
-    val data = Map("long" -> longitude, "lat" -> latitude,"timestamp" -> timestamp)
-
-    val gson = new Gson();
-    val jsondata = gson.toJson(data.asJava + "\n");
-
-    val putRecordsRequestEntry = new PutRecordsRequestEntry
-    putRecordsRequestEntry.setData(ByteBuffer.wrap(jsondata.getBytes))
-    putRecordsRequestEntry.setPartitionKey(String.format("partitionKey-%d", 1))
-    putRecordsRequestEntryList.add(putRecordsRequestEntry)
-
-
-    putRecordsRequest.setRecords(putRecordsRequestEntryList)
-    val putRecordsResult = kinesisClient.putRecords(putRecordsRequest)
-    System.out.println("Put Result" + putRecordsResult)
-
+    val json: JsValue = Json.obj(
+      "droneId"     -> id,
+      "long"               -> longitude,
+      "lat"                -> latitude,
+      "timestamp"          -> timestamp,
+    )
+    put_json_kinesis(json)
   }
 
 }
