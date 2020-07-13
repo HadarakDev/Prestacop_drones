@@ -31,9 +31,9 @@ object csv_producer {
   def main(args: Array[String]): Unit = {
     val fileName = "../../Parking_Violations_Issued_-_Fiscal_Year_2017.csv"
 
-    val aws_access_key_id = "ASIAWQZQX3A3XYC2AQHX"
-    val aws_secret_access_key = "mGvz/oOpG4ZksBmimKlS31+7WHC5yx1YK2qPD20F"
-    val aws_session_token = "FwoGZXIvYXdzECEaDJCLLe29Rtc//jIkmCK/AZZCGgJx4BVhnrz9fCwwLyaV9ddW8KqJWB0Ra4O23T+M5tSAe0D7NvixEC65NCE3pMjr1lG0ShKefHcpsEc9Y1fN++pcDMtxxcYQQrg37n7kWvwrmaknWwy8i+zjw7ugYDpe6b1LXrYvn1daDnWrumtTrFt4O8WCV/4FrY+lcdIXyST/a1CCmB7s7yrcdFG2rgCZNtf8COVDc0yzRm/5YMpmj6jKXURRtB8CV6Jix3lby3jfBhWizvubi/c+2Y6aKM3zh/gFMi2E+LS18AutO6JoioBJvXAMlW1Or/TkhGbIczNbLoPnfs3+BgQ+LFkbkaptaw0="
+    val aws_access_key_id = "ASIAWQZQX3A3UOMBILHT"
+    val aws_secret_access_key = "0TRj0XXQPLT0HqyyO5J9KVivk7klrc0jTBVybgVu"
+    val aws_session_token = "FwoGZXIvYXdzEK///////////wEaDNEg+Ak+VTaIrHvhbCK/AVFDhY1Y+CrjTE+HLpOGmbieIf5aarieylgEh4SSr/RyKpnKPJAgzFCz6YZcbH5IqyAD4kimuwV8t9eXjWoX01hGdXObnwfmmX86rh78cYvHmSk913q4oZ6p8tgWcFDJ+83d+mok0xvjXLIgGy8i2jQF571kVr6BmOVeHrnb1Jzs7+aPQ0MOpRU2kSL9ADXhjX7ZAa2RDG6VDQD3661KbKjcnNoSk7+mN3HrtTGoNbE/TS1hUO/eMuELd5SFjMhHKOSEp/gFMi1GDbibYxtxbj6N92i1M+wBk+Dij5c2tfp1G/3yBD78mIUucI5nywTWrdBLjLk="
     val awsCreds = new BasicSessionCredentials(aws_access_key_id,
       aws_secret_access_key,
       aws_session_token
@@ -54,13 +54,22 @@ object csv_producer {
 
     val key = Source.fromFile(fileName).getLines.next()
       .replace(" ", "_")
-      .replace("?", "").split(",")
+      .replace("?", "")
+      .replace("\\s", "")
+      .replace("[", "")
+      .replace(";", "")
+      .replace("{", "")
+      .replace("}", "")
+      .replace("(", "")
+      .replace(")", "")
+      .replace("|", "")
+      .split(",")
 
 
     for (line <- Source.fromFile(fileName).getLines().drop(1)) { // Dropping the column names
       var line_fixed = line
       while (line_fixed.contains(",,")) {
-        line_fixed = line_fixed.replace(",,", ",Null,")
+        line_fixed = line_fixed.replace(",,", ", ,")
           .replace("\\s", "")
           .replace("[", "")
           .replace(";", "")
